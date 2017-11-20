@@ -1,0 +1,501 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of EyeTrackingDataset</title>
+  <meta name="keywords" content="EyeTrackingDataset">
+  <meta name="description" content="">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../index.html">Home</a> &gt;  <a href="index.html">nonius</a> &gt; EyeTrackingDataset.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../index.html"><img alt="<" border="0" src="../left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="index.html">Index for nonius&nbsp;<img alt=">" border="0" src="../right.png"></a></td></tr></table>-->
+
+<h1>EyeTrackingDataset
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong></strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>This is a script file. </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre class="comment"></pre></div>
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+This function calls:
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="EyeTrackingDataset.html" class="code" title="">EyeTrackingDataset</a>	</li><li><a href="applyToFields.html" class="code" title="function f_s = applyToFields(s, f, fields)">applyToFields</a>	Apply a function f to fields of a structure s</li><li><a href="detectOutliers.html" class="code" title="function outliers = detectOutliers(x)">detectOutliers</a>	Detect outliers using k-NN with 2nd order derivative and range features.</li><li><a href="fitCal.html" class="code" title="function res = fitCal(calFile, design, distCorr)">fitCal</a>	Fit the calibration parameters on data with known reference points.</li><li><a href="testCal.html" class="code" title="function res = testCal(testFile, design, params)">testCal</a>	Test the calibration parameters on data with known reference points.</li></ul>
+This function is called by:
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="Example1.html" class="code" title="">Example1</a>	Example 1: analyze calibration, validation and task data.</li><li><a href="Example2.html" class="code" title="">Example2</a>	Example 2: analyze calibration and validation data.</li><li><a href="EyeTrackingDataset.html" class="code" title="">EyeTrackingDataset</a>	</li></ul>
+<!-- crossreference -->
+
+<h2><a name="_subfunctions"></a>SUBFUNCTIONS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="#_sub1" class="code">function obj = EyeTrackingDataset(files, calfiles, valfiles)</a></li><li><a href="#_sub2" class="code">function setCalibrationFiles(this, calfiles)</a></li><li><a href="#_sub3" class="code">function setValidationFiles(this, valfiles)</a></li><li><a href="#_sub4" class="code">function setCalibrationDesign(this, design)</a></li><li><a href="#_sub5" class="code">function setValidationDesign(this, design)</a></li><li><a href="#_sub6" class="code">function estimateCalibrationParams(this)</a></li><li><a href="#_sub7" class="code">function validateCalibrationParams(this)</a></li><li><a href="#_sub8" class="code">function applyCalibrationParams(this)</a></li><li><a href="#_sub9" class="code">function epochAround(this, markerName, timeWindow, epochName)</a></li><li><a href="#_sub10" class="code">function groupByCondition(this)</a></li><li><a href="#_sub11" class="code">function rejectOutliers(this, conds)</a></li><li><a href="#_sub12" class="code">function S = stackTrials(this, epochName, whichEye, whichVar)</a></li><li><a href="#_sub13" class="code">function plotConditions(this, conds, whichEye, field)</a></li><li><a href="#_sub14" class="code">function plotEpoch(this, epochName, whichEye, whichVar)</a></li><li><a href="#_sub15" class="code">function map = plotHeatmap(this, cond, whichEye, histBins)</a></li><li><a href="#_sub16" class="code">function computeCondVergence(this, conds)</a></li><li><a href="#_sub17" class="code">function v = expectedVergence(ipd, vd)</a></li></ul>
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre>0001  classdef <a href="EyeTrackingDataset.html" class="code" title="">EyeTrackingDataset</a> &lt; handle
+0002     <span class="comment">% Handle eye-tracking datasets.</span>
+0003     
+0004     <span class="comment">% base properties</span>
+0005     properties
+0006         files
+0007         meas
+0008         evnt
+0009         calibration
+0010         validation
+0011         epochs
+0012         epochTime
+0013         conditions
+0014         samplingRate
+0015     <span class="keyword">end</span>
+0016     properties (Access = private)
+0017         state
+0018     <span class="keyword">end</span>
+0019     
+0020     
+0021     <span class="comment">% methods that handle the data</span>
+0022     methods
+0023         
+0024         <span class="comment">% Constructor</span>
+0025         <a name="_sub0" href="#_subfunctions" class="code">function obj = EyeTrackingDataset(files, calfiles, valfiles)</a>
+0026             
+0027             <span class="keyword">if</span> nargin &lt; 2
+0028                 calfiles = {};
+0029             <span class="keyword">end</span>
+0030             <span class="keyword">if</span> nargin &lt; 3
+0031                 valfiles = {};
+0032             <span class="keyword">end</span>
+0033             <span class="keyword">if</span> ~iscell(files)
+0034                 files = {files};
+0035             <span class="keyword">end</span>
+0036             <span class="keyword">if</span> ~iscell(calfiles)
+0037                 calfiles = {calfiles};
+0038             <span class="keyword">end</span>
+0039             <span class="keyword">if</span> ~iscell(valfiles)
+0040                 valfiles = {valfiles};
+0041             <span class="keyword">end</span>
+0042             
+0043             obj.files = files;
+0044             <span class="keyword">for</span> i = 1:numel(files)
+0045                 runData = load(files{i});
+0046                 obj.evnt{i} = runData.EVT;
+0047                 obj.meas{i} = runData.E;
+0048                 obj.samplingRate{i} = 10^3 / (runData.E.L.T(2) - runData.E.L.T(1));
+0049             <span class="keyword">end</span>
+0050             
+0051             <span class="comment">% calibration and validation data</span>
+0052             obj.calibration.files = calfiles;
+0053             obj.validation.files = valfiles;
+0054             obj.state = <span class="string">'raw'</span>;  <span class="comment">% this really should be private</span>
+0055         <span class="keyword">end</span>
+0056         
+0057         
+0058         <span class="comment">% Set calibration files</span>
+0059         <a name="_sub1" href="#_subfunctions" class="code">function setCalibrationFiles(this, calfiles)</a>
+0060             <span class="keyword">if</span> ~iscell(calfiles)
+0061                 calfiles = {calfiles};
+0062             <span class="keyword">end</span>
+0063             this.calibration.files = calfiles;
+0064         <span class="keyword">end</span>
+0065         
+0066         
+0067         <span class="comment">% Set validation files</span>
+0068         <a name="_sub2" href="#_subfunctions" class="code">function setValidationFiles(this, valfiles)</a>
+0069             <span class="keyword">if</span> ~iscell(valfiles)
+0070                 valfiles = {valfiles};
+0071             <span class="keyword">end</span>
+0072             this.validation.files = valfiles;
+0073         <span class="keyword">end</span>
+0074         
+0075         
+0076         <span class="comment">% Set calibration design</span>
+0077         <a name="_sub3" href="#_subfunctions" class="code">function setCalibrationDesign(this, design)</a>
+0078             <span class="comment">% [nrg] TODO: check if design structure is valid</span>
+0079             this.calibration.design = design;
+0080         <span class="keyword">end</span>
+0081         
+0082         
+0083         <span class="comment">% Set validation design</span>
+0084         <a name="_sub4" href="#_subfunctions" class="code">function setValidationDesign(this, design)</a>
+0085             <span class="comment">% [nrg] TODO: check if design structure is valid</span>
+0086             this.validation.design = design;
+0087         <span class="keyword">end</span>
+0088         
+0089         
+0090         <span class="comment">% Estimate calibration parameters</span>
+0091         <a name="_sub5" href="#_subfunctions" class="code">function estimateCalibrationParams(this)</a>
+0092             
+0093             <span class="keyword">if</span> isempty(this.calibration.files)
+0094                 error([<span class="string">'No calibration files have been defined. '</span>,<span class="keyword">...</span>
+0095                        <span class="string">'You can specify calibration files in EyeTrackingDataset() '</span>,<span class="keyword">...</span>
+0096                        <span class="string">'or using the method setCalibrationFiles(...)'</span>])
+0097             <span class="keyword">else</span>
+0098                 calFiles = this.calibration.files;
+0099             <span class="keyword">end</span>
+0100             
+0101             nCalFiles = numel(calFiles);
+0102             
+0103             <span class="keyword">if</span> contains(fieldnames(this.calibration), <span class="string">'design'</span>)
+0104                 error([<span class="string">'No calibration design has been specified. '</span>,<span class="keyword">...</span>
+0105                        <span class="string">'You can specify the calibration design using '</span>,<span class="keyword">...</span>
+0106                        <span class="string">'the method setCalibrationDesign(...)'</span>])
+0107             <span class="keyword">end</span>
+0108             
+0109             <span class="keyword">switch</span> numel(this.calibration.design)
+0110                 <span class="keyword">case</span> 1
+0111                     fprintf(<span class="string">'One calibration design found, using it for all calibration files...'</span>);
+0112                     design(1:nCalFiles) = this.calibration.design;
+0113                 <span class="keyword">case</span> numel(calFiles)
+0114                     design = this.calibration.design;
+0115                 <span class="keyword">otherwise</span>
+0116                     error(<span class="string">'The number of specified calibration designs does not match the number or calibration files'</span>)
+0117             <span class="keyword">end</span>
+0118             
+0119             
+0120             this.calibration.fit(1:nCalFiles) = struct(<span class="string">'L'</span>, [], <span class="string">'R'</span>, []);
+0121             
+0122             <span class="keyword">for</span> i = 1:nCalFiles
+0123                 
+0124                 <span class="comment">% estimate</span>
+0125                 res = <a href="fitCal.html" class="code" title="function res = fitCal(calFile, design, distCorr)">fitCal</a>(calFiles{i}, design(i));
+0126                 
+0127                 <span class="comment">% store params</span>
+0128                 this.calibration.fit(i) = res;
+0129                 
+0130             <span class="keyword">end</span>
+0131             
+0132         <span class="keyword">end</span>
+0133         
+0134         
+0135         <span class="comment">% Validate calibration parameters</span>
+0136         <a name="_sub6" href="#_subfunctions" class="code">function validateCalibrationParams(this) </a>
+0137             <span class="keyword">if</span> isempty(this.validation.files)
+0138                 error([<span class="string">'No validation files have been defined. '</span>,<span class="keyword">...</span>
+0139                        <span class="string">'You can specify calibration files in EyeTrackingDataset() '</span>,<span class="keyword">...</span>
+0140                        <span class="string">'or using the method setCalibrationFiles(...)'</span>])
+0141             <span class="keyword">else</span>
+0142                 valFiles = this.validation.files;
+0143                 nValFiles = numel(valFiles);
+0144                 calFiles = this.calibration.files;
+0145                 nCalFiles = numel(calFiles);
+0146             <span class="keyword">end</span>
+0147             
+0148             <span class="keyword">if</span> nValFiles ~= nCalFiles
+0149                 error([<span class="string">'The number of calibration files (%i) does not match '</span>, <span class="keyword">...</span>
+0150                        <span class="string">'the number of validation files (%i)'</span>], <span class="keyword">...</span>
+0151                        nCalFiles, nValFiles);
+0152             <span class="keyword">end</span>
+0153             
+0154             <span class="keyword">switch</span> numel(this.validation.design)
+0155                 <span class="keyword">case</span> 1
+0156                     fprintf(<span class="string">'One validation design found, using it for all validation files...\n'</span>);
+0157                     design(1:nValFiles) = this.validation.design;
+0158                 <span class="keyword">case</span> nValFiles
+0159                     design = this.validation.design;
+0160                 <span class="keyword">otherwise</span>
+0161                     error(<span class="string">'The number of specified calibration designs does not match the number or calibration files'</span>)
+0162             <span class="keyword">end</span>
+0163             
+0164             this.validation.res(1:nValFiles) = struct(<span class="string">'L'</span>, [], <span class="string">'R'</span>, []);
+0165             
+0166             <span class="keyword">for</span> i = 1 : nValFiles
+0167                 
+0168                 <span class="comment">% test using the calibration parameters</span>
+0169                 res = <a href="testCal.html" class="code" title="function res = testCal(testFile, design, params)">testCal</a>(valFiles{i}, design(i), this.calibration.fit(i));
+0170                 
+0171                 <span class="comment">% store results in validation structure</span>
+0172                 this.validation.res(i) = res;
+0173                 
+0174             <span class="keyword">end</span>
+0175         <span class="keyword">end</span>
+0176         
+0177         
+0178         <span class="comment">% Apply parameters to measurement data</span>
+0179         <a name="_sub7" href="#_subfunctions" class="code">function applyCalibrationParams(this)</a>
+0180             
+0181             <span class="keyword">if</span> strcmp(this.state, <span class="string">'calibrated'</span>)
+0182                 error([<span class="string">'The dataset appears to have been calibrated previously. '</span>, <span class="keyword">...</span>
+0183                        <span class="string">'Perhaps you called applyCalibrationParams twice on this object?'</span>])
+0184             <span class="keyword">end</span>
+0185             
+0186             nFiles = numel(this.meas);
+0187             <span class="keyword">for</span> i = 1 : nFiles
+0188                 params = this.calibration.fit(i);
+0189                 eyes = fieldnames(params);
+0190                 <span class="keyword">for</span> e = 1 : numel(eyes)
+0191                     this.meas{i}.(eyes{e}).H = (this.meas{i}.(eyes{e}).H - params.(eyes{e}).hb(2)) / params.(eyes{e}).hb(1);
+0192                     this.meas{i}.(eyes{e}).V = (this.meas{i}.(eyes{e}).V - params.(eyes{e}).vb(2)) / params.(eyes{e}).vb(1);
+0193                 <span class="keyword">end</span>
+0194             <span class="keyword">end</span>
+0195             this.state = <span class="string">'calibrated'</span>;
+0196         <span class="keyword">end</span>
+0197                 
+0198         
+0199         <span class="comment">% Epoch data around marker ([nrg] should rename to epochAround)</span>
+0200         <a name="_sub8" href="#_subfunctions" class="code">function epochAround(this, markerName, timeWindow, epochName)</a>
+0201                         
+0202             <span class="keyword">if</span> nargin &lt; 4
+0203                 epochName = markerName;
+0204             <span class="keyword">end</span>
+0205             
+0206             ep = cell(numel(this.meas), 1);
+0207             
+0208             <span class="keyword">for</span> r = 1:numel(this.meas)
+0209             
+0210                 timeWindow = timeWindow / 10^3 * this.samplingRate{r};
+0211                 t = this.evnt{r}.msg.time(cellfun(@(x) contains(x, markerName), this.evnt{r}.msg.text));
+0212                 ep{r} = cell(numel(t), 1);
+0213                 
+0214                 <span class="keyword">for</span> i = 1:numel(t)
+0215                     idx = find(this.meas{r}.L.T == t(i));
+0216                     frames = (idx + timeWindow(1)):(idx + timeWindow(2));
+0217                     ep{r}{i} = <a href="applyToFields.html" class="code" title="function f_s = applyToFields(s, f, fields)">applyToFields</a>(this.meas{r}, @(x) x(frames));
+0218                 
+0219                 <span class="keyword">end</span>
+0220                 
+0221             <span class="keyword">end</span>
+0222             
+0223             this.epochs.(epochName) = ep;
+0224             this.epochTime.(epochName) = timeWindow(1):timeWindow(2);
+0225         <span class="keyword">end</span>
+0226         
+0227         
+0228         <span class="comment">% Group all trials per condition</span>
+0229         <a name="_sub9" href="#_subfunctions" class="code">function groupByCondition(this)</a>
+0230             
+0231             conds = fieldnames(this.epochs);
+0232             
+0233             <span class="keyword">for</span> i = 1:numel(conds)
+0234                 eyes = fieldnames(this.epochs.(conds{i}){1}{1});
+0235                 <span class="keyword">for</span> e = 1:numel(eyes)
+0236                     vars = fieldnames(this.epochs.(conds{i}){1}{1}.(eyes{e}));
+0237                     <span class="keyword">for</span> v = 1:numel(vars)
+0238                         this.conditions.(conds{i}).(eyes{e}).(vars{v}) = this.stackTrials(conds{i}, eyes{e}, vars{v});
+0239                     <span class="keyword">end</span>
+0240                 <span class="keyword">end</span>
+0241             <span class="keyword">end</span>
+0242             
+0243         <span class="keyword">end</span>
+0244         
+0245         
+0246         <span class="comment">% Rejects outliers</span>
+0247         <a name="_sub10" href="#_subfunctions" class="code">function rejectOutliers(this, conds)</a>
+0248             <span class="keyword">if</span> nargin &lt; 2
+0249                 conds = fieldnames(this.conditions);
+0250             <span class="keyword">end</span>
+0251             <span class="keyword">if</span> isempty(conds)
+0252                 conds = fieldnames(this.conditions);
+0253             <span class="keyword">end</span>
+0254             <span class="keyword">if</span> ~iscell(conds)
+0255                 conds = {conds};
+0256             <span class="keyword">end</span>
+0257             
+0258             <span class="keyword">for</span> c = 1:numel(conds)
+0259                 outliersL = <a href="detectOutliers.html" class="code" title="function outliers = detectOutliers(x)">detectOutliers</a>(this.conditions.(conds{c}).L.H);
+0260                 outliersR = <a href="detectOutliers.html" class="code" title="function outliers = detectOutliers(x)">detectOutliers</a>(this.conditions.(conds{c}).R.H);
+0261                 reject = outliersL | outliersR;
+0262                 fprintf(<span class="string">'[OUTLIER REJECTION] Rejecting %i trials (%.2f %%) for condition %s\n'</span>, <span class="keyword">...</span>
+0263                         sum(reject), mean(reject)*100, conds{c})
+0264                 this.conditions.(conds{c}).L = <a href="applyToFields.html" class="code" title="function f_s = applyToFields(s, f, fields)">applyToFields</a>(this.conditions.(conds{c}).L, @(x) x(~reject, :));
+0265                 this.conditions.(conds{c}).R = <a href="applyToFields.html" class="code" title="function f_s = applyToFields(s, f, fields)">applyToFields</a>(this.conditions.(conds{c}).R, @(x) x(~reject, :));
+0266             <span class="keyword">end</span>
+0267         <span class="keyword">end</span>
+0268         
+0269         
+0270         <span class="comment">% Stack trials into 2d array</span>
+0271         <a name="_sub11" href="#_subfunctions" class="code">function S = stackTrials(this, epochName, whichEye, whichVar)</a>
+0272             
+0273             data = this.epochs.(epochName);
+0274             timeAx = this.epochTime.(epochName);
+0275             
+0276             nRuns = numel(data);
+0277             nTrials = 0;
+0278             <span class="keyword">for</span> r = 1 : nRuns
+0279                 nTrials = nTrials + numel(data{r});
+0280             <span class="keyword">end</span>
+0281 
+0282             S = zeros(nTrials, numel(timeAx));
+0283             trialNum = 1;
+0284             <span class="keyword">for</span> r = 1 : nRuns
+0285                 nRunTrials = numel(data{r});
+0286                 <span class="keyword">for</span> t = 1 : nRunTrials
+0287                     S(trialNum, :) = data{r}{t}.(whichEye).(whichVar);
+0288                     trialNum = trialNum + 1;
+0289                 <span class="keyword">end</span>
+0290             <span class="keyword">end</span>
+0291             
+0292         <span class="keyword">end</span>
+0293                 
+0294         
+0295         <span class="comment">% PLOTTING</span>
+0296         <span class="comment">% Plot mean and sd for one or more conditions</span>
+0297         <a name="_sub12" href="#_subfunctions" class="code">function plotConditions(this, conds, whichEye, field)</a>
+0298             
+0299             figure;
+0300             pcolors = get(gca, <span class="string">'ColorOrder'</span>);
+0301             
+0302             cHandles = zeros(1, numel(conds));
+0303             
+0304             <span class="keyword">for</span> c = 1:numel(conds)
+0305                 h = shadedErrorBar(this.epochTime.(conds{c}), <span class="keyword">...</span>
+0306                                    this.conditions.(conds{c}).(whichEye).(field), <span class="keyword">...</span>
+0307                                    {@(x) mean(x,1), @(x) std(x,[],1)}, <span class="keyword">...</span>
+0308                                    <span class="string">'lineProps'</span>, {<span class="string">'color'</span>, pcolors(c,:)});
+0309                 hold on;
+0310                 cHandles(c) = h.mainLine;
+0311             <span class="keyword">end</span>
+0312             xlabel(<span class="string">'Time (ms)'</span>)
+0313             <span class="comment">% add ylabel</span>
+0314             
+0315             <span class="comment">% add legend for conditions</span>
+0316             legend(cHandles, conds, <span class="string">'Box'</span>, <span class="string">'off'</span>)
+0317         <span class="keyword">end</span>
+0318         
+0319         
+0320         <span class="comment">% Plot raw epoched data (useful for quality control)</span>
+0321         <a name="_sub13" href="#_subfunctions" class="code">function plotEpoch(this, epochName, whichEye, whichVar)</a>
+0322             
+0323             <span class="keyword">if</span> ~iscell(whichEye)
+0324                 whichEye = {whichEye};
+0325             <span class="keyword">end</span>
+0326             
+0327             <span class="keyword">if</span> ~iscell(whichVar)
+0328                 whichVar = {whichVar};
+0329             <span class="keyword">end</span>
+0330             
+0331             data = this.epochs.(epochName);
+0332             timeAx = this.epochTime.(epochName);
+0333             
+0334             nRuns = numel(data);
+0335             
+0336             nEyes = numel(whichEye);
+0337             <span class="keyword">for</span> e = 1 : nEyes
+0338                 hf = figure;
+0339                 subplot(1, nEyes, e);
+0340                 hold on;
+0341                 
+0342                 <span class="keyword">for</span> v = 1 : numel(whichVar)
+0343                     <span class="keyword">for</span> r = 1 : nRuns
+0344                         nTrials = numel(data{r});
+0345                         <span class="keyword">for</span> t = 1 : nTrials
+0346                             plot(timeAx, data{r}{t}.(whichEye{e}).(whichVar{v}))
+0347                         <span class="keyword">end</span>
+0348                     <span class="keyword">end</span>
+0349                 <span class="keyword">end</span>
+0350                 xlabel(<span class="string">'Time (ms)'</span>)
+0351             <span class="keyword">end</span>
+0352             
+0353         <span class="keyword">end</span>
+0354         
+0355         
+0356         <span class="comment">% Plot heatmap of eye position</span>
+0357         <a name="_sub14" href="#_subfunctions" class="code">function map = plotHeatmap(this, cond, whichEye, histBins)</a>
+0358             
+0359             <span class="keyword">if</span> nargin &lt; 4
+0360                 histBins = [];
+0361             <span class="keyword">end</span>
+0362             
+0363             xy = [this.conditions.(cond).(whichEye).H(:), <span class="keyword">...</span>
+0364                   this.conditions.(cond).(whichEye).V(:)];
+0365             
+0366             <span class="keyword">if</span> isempty(histBins)
+0367                 bounds = [min(xy, [], 1); max(xy, [], 1)];
+0368                 xbins = linspace(bounds(1,1), bounds(2,1), 50);
+0369                 ybins = linspace(bounds(1,2), bounds(2,2), 50);
+0370                 histBins = {xbins, ybins};
+0371             <span class="keyword">else</span>
+0372                 xbins = histBins{1};
+0373                 ybins = histBins{2};
+0374             <span class="keyword">end</span>
+0375 
+0376             xbinCenters = xbins(1:end-1) + diff(xbins)/2;
+0377             ybinCenters = ybins(1:end-1) + diff(ybins)/2;
+0378             
+0379             <span class="comment">% NOTE: we are transposing the result so that X corresponds to</span>
+0380             <span class="comment">% horizontal coordinates</span>
+0381             rawMap = hist3(xy, <span class="string">'Edges'</span>, histBins)';
+0382             map = imfilter(rawMap(1:end-1, 1:end-1), ones(6,6)/36);
+0383             
+0384             figure;
+0385             imagesc(map);
+0386             
+0387             <span class="comment">% plot reference visual angles</span>
+0388             xCenter = numel(xbinCenters) / 2 + 0.5;
+0389             yCenter = numel(ybinCenters) / 2 + 0.5;
+0390             theta = 0 : 0.01 : 2*pi;
+0391             
+0392             xScale = abs(xbinCenters(end)-xbinCenters(1))/(numel(xbinCenters)-1);
+0393             yScale = abs(ybinCenters(end)-ybinCenters(1))/(numel(ybinCenters)-1);
+0394                         
+0395             diameterDeg = [4, 8];
+0396             diameter = diameterDeg ./ [xScale, yScale];
+0397             <span class="keyword">for</span> dd = 1:numel(diameter)
+0398                 radius = diameter(dd)/2;
+0399                 x = radius * cos(theta) + xCenter;
+0400                 y = radius * sin(theta) + yCenter;
+0401                 hold on;
+0402                 <span class="keyword">if</span> mod(dd,2) == 0
+0403                     lstyle = <span class="string">'-'</span>;
+0404                 <span class="keyword">else</span> 
+0405                     lstyle = <span class="string">'--'</span>;
+0406                 <span class="keyword">end</span>
+0407                 plot(x, y, [<span class="string">'w'</span> lstyle], <span class="string">'LineWidth'</span>, 3);
+0408                 ht = text((radius + 0.2/xScale) * cos(-1*pi()/4) + xCenter, <span class="keyword">...</span>
+0409                           (radius + 0.2/yScale) * sin(-1*pi()/4) + yCenter, <span class="keyword">...</span>
+0410                           [num2str(diameterDeg(dd)/2) <span class="string">' deg'</span>], <span class="string">'color'</span>, <span class="string">'w'</span>);
+0411                 set(ht, <span class="string">'Rotation'</span>, -45)
+0412             <span class="keyword">end</span>
+0413             
+0414             <span class="comment">% tick locations, in degrees</span>
+0415             xTickLoc = linspace(-5, 5, 5);
+0416             yTickLoc = linspace(-5, 5, 5);
+0417             axis square;
+0418             set(gca, <span class="string">'xtick'</span>, xTickLoc / xScale + xCenter)
+0419             set(gca, <span class="string">'xticklabel'</span>, xTickLoc)
+0420             set(gca, <span class="string">'ytick'</span>, yTickLoc / yScale + yCenter)
+0421             set(gca, <span class="string">'yticklabel'</span>, yTickLoc)
+0422             ylabel(<span class="string">'Vertical position (deg)'</span>) 
+0423             xlabel(<span class="string">'Horizontal position (deg)'</span>) 
+0424         <span class="keyword">end</span>
+0425         
+0426         
+0427         <span class="comment">% STATISTICS</span>
+0428         
+0429         <a name="_sub15" href="#_subfunctions" class="code">function computeCondVergence(this, conds)</a>
+0430             figure; hold on;
+0431             pcolors = get(gca, <span class="string">'ColorOrder'</span>);
+0432             <span class="keyword">for</span> c = 1 : numel(conds)
+0433                 v = this.conditions.(conds{c}).L.H - this.conditions.(conds{c}).R.H;
+0434                 
+0435                 h = shadedErrorBar(this.epochTime.(conds{c}), <span class="keyword">...</span>
+0436                                    v, <span class="keyword">...</span>
+0437                                    {@(x) mean(x,1), @(x) std(x,[],1)}, <span class="keyword">...</span>
+0438                                    <span class="string">'lineProps'</span>, {<span class="string">'color'</span>, pcolors(c,:)});
+0439             <span class="keyword">end</span>
+0440             
+0441         <span class="keyword">end</span>
+0442         
+0443         
+0444         <a name="_sub16" href="#_subfunctions" class="code">function v = expectedVergence(ipd, vd)</a>
+0445             <span class="comment">% expectedVergence = @(ipd, vd) 2 * 180/pi() * atan(ipd/vd)</span>
+0446             v = 2 * 180/pi() * atan(ipd/vd);
+0447         <span class="keyword">end</span>
+0448         
+0449         
+0450     <span class="keyword">end</span>
+0451     
+0452 <span class="keyword">end</span></pre></div>
+<hr><address>Generated on Sat 02-Sep-2017 02:27:19 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" title="Matlab Documentation in HTML">m2html</a></strong> &copy; 2005</address>
+</body>
+</html>

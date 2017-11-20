@@ -1,0 +1,261 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of fitCal</title>
+  <meta name="keywords" content="fitCal">
+  <meta name="description" content="Fit the calibration parameters on data with known reference points.">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../index.html">Home</a> &gt;  <a href="index.html">nonius</a> &gt; fitCal.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../index.html"><img alt="<" border="0" src="../left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="index.html">Index for nonius&nbsp;<img alt=">" border="0" src="../right.png"></a></td></tr></table>-->
+
+<h1>fitCal
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>Fit the calibration parameters on data with known reference points.</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>function res = fitCal(calFile, design, distCorr) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre class="comment"> Fit the calibration parameters on data with known reference points.
+
+ INPUT
+
+ calFile           (string)        path to mat file containing raw and
+                                   event data
+
+ design            (struct)        structure containing the position and
+  .xcoords                         onset/offset times for reference data
+  .ycoords                         (see Documentation for more info)
+  .onsetTimes
+  .offsetTimes
+
+ distCorr          (string)        method for distortion correction
+                                   { 'none' | 'manual' | 'auto_cpd' }
+
+
+ OUTPUT
+
+ res               (struct)        structure containing fit results
+
+  .(eye).r2        (double)        proportion of variance explained by fit
+  .(eye).vb        (arr[double])   array of parameters ([slope, intersect])
+                                   of the fitted linear model to vertical
+                                   coordinates
+  .(eye).hb        (arr[double])   array of parameters ([slope, intersect])
+                                   of the fitted linear model to
+                                   horizontal coordinates
+  .(eye).movdelay  (double)        estimated delay between stim onset and
+                                   eye movement
+
+
+ nrg, '01-Sep-2017 23:48:30'</pre></div>
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+This function calls:
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="manualRegistration.html" class="code" title="function trf = manualRegistration(A, B)">manualRegistration</a>	GUI for manual coregistration between point sets A and B. Returns a</li></ul>
+This function is called by:
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="EyeTrackingDataset.html" class="code" title="">EyeTrackingDataset</a>	</li></ul>
+<!-- crossreference -->
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function res = fitCal(calFile, design, distCorr)</a>
+0002 <span class="comment">% Fit the calibration parameters on data with known reference points.</span>
+0003 <span class="comment">%</span>
+0004 <span class="comment">% INPUT</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% calFile           (string)        path to mat file containing raw and</span>
+0007 <span class="comment">%                                   event data</span>
+0008 <span class="comment">%</span>
+0009 <span class="comment">% design            (struct)        structure containing the position and</span>
+0010 <span class="comment">%  .xcoords                         onset/offset times for reference data</span>
+0011 <span class="comment">%  .ycoords                         (see Documentation for more info)</span>
+0012 <span class="comment">%  .onsetTimes</span>
+0013 <span class="comment">%  .offsetTimes</span>
+0014 <span class="comment">%</span>
+0015 <span class="comment">% distCorr          (string)        method for distortion correction</span>
+0016 <span class="comment">%                                   { 'none' | 'manual' | 'auto_cpd' }</span>
+0017 <span class="comment">%</span>
+0018 <span class="comment">%</span>
+0019 <span class="comment">% OUTPUT</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% res               (struct)        structure containing fit results</span>
+0022 <span class="comment">%</span>
+0023 <span class="comment">%  .(eye).r2        (double)        proportion of variance explained by fit</span>
+0024 <span class="comment">%  .(eye).vb        (arr[double])   array of parameters ([slope, intersect])</span>
+0025 <span class="comment">%                                   of the fitted linear model to vertical</span>
+0026 <span class="comment">%                                   coordinates</span>
+0027 <span class="comment">%  .(eye).hb        (arr[double])   array of parameters ([slope, intersect])</span>
+0028 <span class="comment">%                                   of the fitted linear model to</span>
+0029 <span class="comment">%                                   horizontal coordinates</span>
+0030 <span class="comment">%  .(eye).movdelay  (double)        estimated delay between stim onset and</span>
+0031 <span class="comment">%                                   eye movement</span>
+0032 <span class="comment">%</span>
+0033 <span class="comment">%</span>
+0034 <span class="comment">% nrg, '01-Sep-2017 23:48:30'</span>
+0035 
+0036 
+0037 <span class="keyword">if</span> nargin &lt; 3
+0038     distCorr = <span class="string">'none'</span>;
+0039 <span class="keyword">end</span>
+0040 
+0041 dstruct = load(calFile);
+0042 eyes = fieldnames(dstruct.E);
+0043 
+0044 <span class="keyword">for</span> e = 1:numel(eyes)
+0045 
+0046     <span class="comment">% calibration data</span>
+0047     gaze = dstruct.E.(eyes{e});
+0048 
+0049     <span class="comment">% exclude blink periods +- 25 ms</span>
+0050     blinks = zeros(numel(gaze.T), 1);
+0051     <span class="keyword">for</span> i = 1:dstruct.EVT.blink.n
+0052         blinks((dstruct.E.L.T &gt; dstruct.EVT.blink.Tstart(i)-25) &amp; (dstruct.E.L.T &lt; dstruct.EVT.blink.Tend(i)+25)) = 1;
+0053     <span class="keyword">end</span>
+0054 
+0055     gaze.H(blinks==1) = nan;
+0056     gaze.V(blinks==1) = nan;
+0057 
+0058     movementDelay = linspace(0.100, 0.400, 16);
+0059     fprintf(<span class="string">'Estimating %s eye position\n'</span>, eyes{e})
+0060     r2 = 0;
+0061     <span class="keyword">for</span> d = 1:numel(movementDelay)
+0062 
+0063         fprintf(<span class="string">'... [delay = %.3f s'</span>, movementDelay(d))
+0064 
+0065         time = (gaze.T - gaze.T(1))/10^3;
+0066         [hX, vX] = deal(zeros(size(time)));
+0067 
+0068         <span class="comment">% add the delay</span>
+0069         theseOnsets = design.onsetTimes + movementDelay(d);
+0070         theseOffsets = design.offsetTimes + movementDelay(d);
+0071 
+0072         <span class="comment">% build regressor</span>
+0073         <span class="keyword">for</span> i = 1:numel(design.xcoords)
+0074             hX((time&gt;theseOnsets(i)) &amp; (time&lt;theseOffsets(i))) = design.xcoords(i);
+0075             vX((time&gt;theseOnsets(i)) &amp; (time&lt;theseOffsets(i))) = design.ycoords(i);
+0076         <span class="keyword">end</span>
+0077 
+0078         flipHorizontal = 1;
+0079         <span class="keyword">if</span> flipHorizontal == 1
+0080             hX = -1 * hX;
+0081         <span class="keyword">end</span>
+0082 
+0083         <span class="comment">% exclude nan samples</span>
+0084         exclude = isnan(gaze.V) | isnan(gaze.H);
+0085 
+0086         vY = gaze.V;
+0087         hY = gaze.H;
+0088 
+0089         vY(exclude) = [];
+0090         vX(exclude) = [];
+0091 
+0092         hY(exclude) = [];
+0093         hX(exclude) = [];
+0094 
+0095         time(exclude) = [];
+0096 
+0097         <span class="comment">% add bias term</span>
+0098         vX(:, 2) = ones(size(vX));
+0099         hX(:, 2) = ones(size(hX));
+0100 
+0101         <span class="comment">% [nrg] later we might include a first order term</span>
+0102 
+0103         <span class="comment">% least-squares regression</span>
+0104         vB = regress(vY, vX);
+0105         vYe = vX*vB;
+0106         vR2 = 1 - (std(vY-vYe)^2)/(std(vY)^2);
+0107 
+0108         hB = regress(hY, hX);
+0109         hYe = hX*hB;
+0110         hR2 = 1 - (std(hY-hYe)^2)/(std(hY)^2);
+0111 
+0112         R2 = (vR2 + hR2)/2;
+0113         fprintf(<span class="string">', R = %.3f]\n'</span>, R2)
+0114 
+0115         <span class="comment">% check if this is the best model so far</span>
+0116         <span class="keyword">if</span> R2 &gt; r2
+0117             r2 = R2;        <span class="comment">% average r2 statistic (horizontal and vertical)</span>
+0118             vb = vB;        <span class="comment">% parameters for vertical position</span>
+0119             hb = hB;        <span class="comment">% parameters for horizontal poisition</span>
+0120             v = vY;         <span class="comment">% measured vertical position (pixel)</span>
+0121             h = hY;         <span class="comment">% measured horizontal position (pixel)</span>
+0122             ve = vYe;       <span class="comment">% estimated vertical position (pixel)</span>
+0123             he = hYe;       <span class="comment">% estimated horizontal position (pixel)</span>
+0124             t = time;       <span class="comment">% time</span>
+0125             movDelay = movementDelay(d);    <span class="comment">% movement delay (seconds)</span>
+0126         <span class="keyword">end</span>
+0127     <span class="keyword">end</span>
+0128 
+0129     res.(eyes{e}).r2 = r2;
+0130     res.(eyes{e}).vb = vb;
+0131     res.(eyes{e}).hb = hb;
+0132     res.(eyes{e}).movdelay = movDelay;
+0133 
+0134     hye = (hY-hb(2))/hb(1);
+0135     vye = (vY-vb(2))/vb(1);
+0136 
+0137     <span class="comment">% distortion correction</span>
+0138     source = [-1*design.xcoords, design.ycoords];
+0139     target = zeros(numel(design.xcoords), 2);
+0140     <span class="keyword">for</span> i = 1:numel(design.xcoords)
+0141         target(i,:) = [nanmedian(hye(hX==design.xcoords(i) &amp; vX==design.ycoords(i))), <span class="keyword">...</span>
+0142                        nanmedian(vye(hX==design.xcoords(i) &amp; vX==design.ycoords(i)))];
+0143     <span class="keyword">end</span>
+0144 
+0145     <span class="keyword">switch</span> distCorr
+0146         <span class="keyword">case</span> <span class="string">'none'</span>
+0147             trf.T = eye(2);
+0148             trf.t = zeros(1, 2);
+0149         <span class="keyword">case</span> <span class="string">'manual'</span>
+0150             trf = <a href="manualRegistration.html" class="code" title="function trf = manualRegistration(A, B)">manualRegistration</a>(source, target);
+0151         <span class="keyword">case</span> <span class="string">'auto_cpd'</span>
+0152             trf = psreg(source, target);
+0153     <span class="keyword">end</span>
+0154 
+0155     res.(eyes{e}).trf = trf;
+0156 
+0157     <span class="comment">% plotting</span>
+0158     figure(<span class="string">'pos'</span>, [100 700 800 200]);
+0159     subplot(1,3,1)
+0160     plot(t, v)
+0161     hold on; plot(t, ve)
+0162     ylabel(<span class="string">'Gaze position'</span>)
+0163     xlabel(<span class="string">'Time (s)'</span>)
+0164     title(<span class="string">'Vertical'</span>)
+0165     xlim([t(1), t(end)]);
+0166 
+0167     subplot(1,3,2)
+0168     plot(t, h)
+0169     hold on; plot(t, he)
+0170     xlabel(<span class="string">'Time (s)'</span>)
+0171     title(<span class="string">'Horizontal'</span>)
+0172     xlim([t(1), t(end)]);
+0173 
+0174     subplot(1,3,3)
+0175     plot(hye, vye, <span class="string">'k.'</span>)
+0176     hold on; plot(-1*design.xcoords, design.ycoords, <span class="string">'ro'</span>)
+0177     ylabel(<span class="string">'Vertical position (deg)'</span>)
+0178     xlabel(<span class="string">'Horizontal position (deg)'</span>)
+0179     xlim([-7,7])
+0180     ylim([-7,7])
+0181 
+0182 <span class="keyword">end</span></pre></div>
+<hr><address>Generated on Sat 02-Sep-2017 02:27:19 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" title="Matlab Documentation in HTML">m2html</a></strong> &copy; 2005</address>
+</body>
+</html>

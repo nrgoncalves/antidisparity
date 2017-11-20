@@ -1,0 +1,1 @@
+Experiment 4 refers to the timing experiment performed with a longer presentation time ( 250ms = 30 frames).

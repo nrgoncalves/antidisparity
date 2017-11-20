@@ -1,0 +1,119 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of Example1</title>
+  <meta name="keywords" content="Example1">
+  <meta name="description" content="Example 1: analyze calibration, validation and task data.">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../index.html">Home</a> &gt;  <a href="index.html">nonius</a> &gt; Example1.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../index.html"><img alt="<" border="0" src="../left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="index.html">Index for nonius&nbsp;<img alt=">" border="0" src="../right.png"></a></td></tr></table>-->
+
+<h1>Example1
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>Example 1: analyze calibration, validation and task data.</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>This is a script file. </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre class="comment"> Example 1: analyze calibration, validation and task data.
+ 
+ In this script we assume that we have collected two sets of measurements 
+ for which we know the &quot;ground truth&quot; positions, and one set of 
+ measurements during our actual experiment. We will use them
+ to calibrate, validate and analyze task data.</pre></div>
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+This function calls:
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="EyeTrackingDataset.html" class="code" title="">EyeTrackingDataset</a>	</li></ul>
+This function is called by:
+<ul style="list-style-image:url(../matlabicon.gif)">
+</ul>
+<!-- crossreference -->
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre>0001 <span class="comment">% Example 1: analyze calibration, validation and task data.</span>
+0002 <span class="comment">%</span>
+0003 <span class="comment">% In this script we assume that we have collected two sets of measurements</span>
+0004 <span class="comment">% for which we know the &quot;ground truth&quot; positions, and one set of</span>
+0005 <span class="comment">% measurements during our actual experiment. We will use them</span>
+0006 <span class="comment">% to calibrate, validate and analyze task data.</span>
+0007 
+0008 clear all;
+0009 close all;
+0010 
+0011 eyetrackingFile = <span class="string">'sample-data/ex1/NG.mat'</span>;
+0012 eyetrackingCalFile = <span class="string">'sample-data/ex1/Cal1.mat'</span>;
+0013 eyetrackingValFile = <span class="string">'sample-data/ex1/Cal2.mat'</span>;
+0014 D = <a href="EyeTrackingDataset.html" class="code" title="">EyeTrackingDataset</a>(eyetrackingFile, <span class="keyword">...</span>
+0015                        eyetrackingCalFile, <span class="keyword">...</span>
+0016                        eyetrackingValFile);
+0017 
+0018 
+0019 <span class="comment">% Calibration</span>
+0020 <span class="comment">% - calibration design</span>
+0021 design.xcoords = [2 0 -2 0 2 0 -4 0]';        <span class="comment">% Horizontal target positions (deg)</span>
+0022 design.ycoords = [0 2 0 -2 0 -2 0 4]';        <span class="comment">% Vertical target positions (deg)</span>
+0023 
+0024 design.onsetTimes = [3, 7, 11, 15, 19, 23, 27, 31];    <span class="comment">% seconds</span>
+0025 design.offsetTimes = [5, 9, 13, 17, 21, 25, 29, 33];   <span class="comment">% seconds</span>
+0026 
+0027 D.setCalibrationDesign(design);
+0028 
+0029 <span class="comment">% - estimate calibration parameters</span>
+0030 D.estimateCalibrationParams();
+0031 
+0032 <span class="comment">% - validate calibration parameters</span>
+0033 D.setValidationDesign(design);
+0034 D.validateCalibrationParams();
+0035 
+0036 <span class="comment">% - apply calibration</span>
+0037 D.applyCalibrationParams();
+0038 
+0039 
+0040 <span class="comment">% Epoch data</span>
+0041 D.epochAround(<span class="string">'Stim1'</span>, [-100, 500], <span class="string">'Same'</span>);
+0042 D.epochAround(<span class="string">'Stim2'</span>, [-100, 500], <span class="string">'Opposite'</span>);
+0043 
+0044 <span class="comment">% Plot epoched data (e.g.)</span>
+0045 <span class="comment">% D.plotEpoch('Same', 'R', 'H')</span>
+0046 <span class="comment">% D.plotEpoch('Opposite', 'L', 'V')</span>
+0047 
+0048 
+0049 <span class="comment">% Group trials per condition</span>
+0050 D.groupByCondition();
+0051 
+0052 
+0053 <span class="comment">% Reject outliers</span>
+0054 D.rejectOutliers();
+0055 
+0056 
+0057 <span class="comment">% Plot comparison between conditions</span>
+0058 D.plotConditions({<span class="string">'Same'</span>, <span class="string">'Opposite'</span>}, <span class="string">'L'</span>, <span class="string">'H'</span>);
+0059 
+0060 
+0061 <span class="comment">% Compute vergence</span>
+0062 D.computeCondVergence({<span class="string">'Same'</span>, <span class="string">'Opposite'</span>})
+0063 
+0064 
+0065 <span class="comment">% Plot heatmap of eye position</span>
+0066 bins = {linspace(-5,5,51), linspace(-5,5,51)};
+0067 map = D.plotHeatmap(<span class="string">'Same'</span>, <span class="string">'L'</span>, bins);</pre></div>
+<hr><address>Generated on Sat 02-Sep-2017 02:27:19 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" title="Matlab Documentation in HTML">m2html</a></strong> &copy; 2005</address>
+</body>
+</html>

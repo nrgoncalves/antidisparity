@@ -1,0 +1,211 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of coherentPointDrift</title>
+  <meta name="keywords" content="coherentPointDrift">
+  <meta name="description" content="Register two point sets (source to target) using the Coherent Point Drift">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../index.html">Home</a> &gt;  <a href="index.html">nonius</a> &gt; coherentPointDrift.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../index.html"><img alt="<" border="0" src="../left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="index.html">Index for nonius&nbsp;<img alt=">" border="0" src="../right.png"></a></td></tr></table>-->
+
+<h1>coherentPointDrift
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>Register two point sets (source to target) using the Coherent Point Drift</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>function [trf, sourceTransformed] = coherentPointDrift(source, target) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre class="comment"> Register two point sets (source to target) using the Coherent Point Drift
+ algorithm (Myronenko &amp; Song, 2009, https://arxiv.org/abs/0905.2635).
+ 
+ !! IMPORTANT NOTE !!: This implementation is experimental and is still
+ unstable.
+
+ INPUT
+
+ source            (arr[double])   coordinates for the points to be 
+                                   transformed (M-by-2)
+
+ target            (arr[double])   coordinates for the target points (N-by-2)
+
+ OUTPUT
+ 
+ trf               (struct)        transformation parameters
+  .T               (arr[double])   affine matrix (2-by-2)
+  .t               (arr[double])   x and y translation parameters (2-by-1)
+ 
+ sourceTransformed (arr[double])   transformed source points
+
+ nrg, '02-Sep-2017 00:17:49'</pre></div>
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+This function calls:
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="applyTransform.html" class="code" title="function xt = applyTransform(x, w, t, direction)">applyTransform</a>	Apply a affine transform w and translation t to data x.</li></ul>
+This function is called by:
+<ul style="list-style-image:url(../matlabicon.gif)">
+</ul>
+<!-- crossreference -->
+
+<h2><a name="_subfunctions"></a>SUBFUNCTIONS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="#_sub1" class="code">function [B, t, s2, success] = solve(S, M, P)</a></li></ul>
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function [trf, sourceTransformed] = coherentPointDrift(source, target)</a>
+0002 <span class="comment">% Register two point sets (source to target) using the Coherent Point Drift</span>
+0003 <span class="comment">% algorithm (Myronenko &amp; Song, 2009, https://arxiv.org/abs/0905.2635).</span>
+0004 <span class="comment">%</span>
+0005 <span class="comment">% !! IMPORTANT NOTE !!: This implementation is experimental and is still</span>
+0006 <span class="comment">% unstable.</span>
+0007 <span class="comment">%</span>
+0008 <span class="comment">% INPUT</span>
+0009 <span class="comment">%</span>
+0010 <span class="comment">% source            (arr[double])   coordinates for the points to be</span>
+0011 <span class="comment">%                                   transformed (M-by-2)</span>
+0012 <span class="comment">%</span>
+0013 <span class="comment">% target            (arr[double])   coordinates for the target points (N-by-2)</span>
+0014 <span class="comment">%</span>
+0015 <span class="comment">% OUTPUT</span>
+0016 <span class="comment">%</span>
+0017 <span class="comment">% trf               (struct)        transformation parameters</span>
+0018 <span class="comment">%  .T               (arr[double])   affine matrix (2-by-2)</span>
+0019 <span class="comment">%  .t               (arr[double])   x and y translation parameters (2-by-1)</span>
+0020 <span class="comment">%</span>
+0021 <span class="comment">% sourceTransformed (arr[double])   transformed source points</span>
+0022 <span class="comment">%</span>
+0023 <span class="comment">% nrg, '02-Sep-2017 00:17:49'</span>
+0024 
+0025 <span class="comment">% exclude nan points</span>
+0026 source(isnan(source), :) = [];
+0027 target(isnan(target), :) = [];
+0028 
+0029 <span class="comment">% initial transform (identity)</span>
+0030 T = eye(2);
+0031 t = [0, 0];
+0032 
+0033 D = size(source, 2);
+0034 <span class="keyword">if</span> size(target, 2) ~= D
+0035     warning(<span class="string">'Number of source and target features do not match.'</span>)
+0036 <span class="keyword">end</span>
+0037 
+0038 M = size(source, 1);
+0039 N = size(target, 1);
+0040 
+0041 <span class="comment">% initialize parameters</span>
+0042 w = 0.001;  <span class="comment">% [nrg] needs quite a bit of adjustment depending on how much noise we have</span>
+0043 s2 = 1/(D*N*M) * sum(sum(pdist2(source, target)));  <span class="comment">% variance</span>
+0044 
+0045 fh = figure;
+0046 hold on;
+0047 plot(target(:,1), target(:,2), <span class="string">'ro'</span>)
+0048 plot(source(:,1), source(:,2), <span class="string">'bx'</span>)
+0049 drawnow;
+0050 
+0051 maxIter = 1000;
+0052 it = 1;
+0053 done = 0;
+0054 <span class="keyword">while</span> (done == 0)
+0055     
+0056     <span class="comment">% transformed data</span>
+0057     sourceTransformed = <a href="applyTransform.html" class="code" title="function xt = applyTransform(x, w, t, direction)">applyTransform</a>(source, T, t);
+0058     
+0059     <span class="comment">% E-step, compute P</span>
+0060     distanceMatrix = pdist2(sourceTransformed, target);
+0061     
+0062     pij = exp(-1 * distanceMatrix .^ 2 / (2*s2));
+0063     pij = pij ./ (repmat(sum(pij, 1), [M, 1]) + (2*pi()*s2)^(D/2)*(w/(1-w))*(M/N));
+0064     
+0065     <span class="comment">% M-step, solve</span>
+0066     [tmpT, tmpt, tmps2, success] = <a href="#_sub1" class="code" title="subfunction [B, t, s2, success] = solve(S, M, P)">solve</a>(target, source, pij);
+0067     
+0068     <span class="keyword">if</span> success
+0069         T = tmpT;
+0070         t = tmpt';
+0071         s2 = tmps2;
+0072     <span class="keyword">else</span>
+0073         <span class="keyword">break</span>;
+0074     <span class="keyword">end</span>
+0075     
+0076     figure(fh);
+0077     cla;
+0078     plot(target(:,1), target(:,2), <span class="string">'ro'</span>)
+0079     plot(sourceTransformed(:,1), sourceTransformed(:,2), <span class="string">'bx'</span>)
+0080     drawnow;
+0081     <span class="comment">% [nrg] could maybe work a bit more on the vizualization to plot the</span>
+0082     <span class="comment">% variance too</span>
+0083     
+0084     <span class="comment">% [nrg] this early stopping criteria does not work very well. I think</span>
+0085     <span class="comment">% I should probably just run this inside a try block, catch the warning</span>
+0086     <span class="comment">% and then return the previous iteration</span>
+0087     <span class="keyword">if</span> it &gt; maxIter
+0088         done = 1;
+0089     <span class="keyword">else</span>
+0090         <span class="keyword">if</span> it ~= 1
+0091            <span class="keyword">if</span> max(max((pij_prev - pij).^2)) &lt; eps
+0092                done = 1;
+0093                fprintf(<span class="string">'Early stopping criteria met at iteration %i.\n'</span>, it)
+0094            <span class="keyword">end</span>
+0095         <span class="keyword">end</span>
+0096         pij_prev = pij;      
+0097         it = it + 1;
+0098     <span class="keyword">end</span>
+0099         
+0100 <span class="keyword">end</span>
+0101 
+0102 sourceTransformed = <a href="applyTransform.html" class="code" title="function xt = applyTransform(x, w, t, direction)">applyTransform</a>(source, T, t);
+0103 trf.T = T;
+0104 trf.t = t;
+0105 
+0106 
+0107 <a name="_sub1" href="#_subfunctions" class="code">function [B, t, s2, success] = solve(S, M, P)</a>
+0108 <span class="comment">% S: matrix containing target points (N-by-D)</span>
+0109 <span class="comment">% T: matrix containing source points (the ones to adjust) (M-by-D)</span>
+0110 <span class="comment">% P: probabilities matrix</span>
+0111 
+0112 D = size(S, 2);
+0113 Np = ones(1, size(M, 1)) * P * ones(size(S, 1), 1);
+0114 
+0115 mu_s = 1/Np * S' * P' * ones(size(S, 1), 1);
+0116 mu_m = 1/Np * M' * P' * ones(size(M, 1), 1);
+0117 
+0118 Se = S - mu_s';
+0119 Me = M - mu_m';
+0120 
+0121 mpm = Me' * diag(P*ones(size(P,2),1)) * Me;
+0122 rc = rcond(mpm);
+0123 
+0124 <span class="keyword">if</span> isnan(rc) || (rc &lt; 10^(-5))
+0125     success = 0;
+0126     [B, t, s2] = deal([]);
+0127 <span class="keyword">else</span>
+0128     <span class="comment">% B = (Se' * P' * Me) * inv(mpm);</span>
+0129     B = (Se' * P' * Me) / mpm;
+0130     t = mu_s - B * mu_m;
+0131     s2 = 1/(Np * D) * (trace(Se' * diag(P'*ones(size(P,1), 1)) * Se) - <span class="keyword">...</span>
+0132                    trace(Se' * P' * Me * B'));
+0133     success = 1;
+0134 <span class="keyword">end</span>
+0135 
+0136 
+0137 
+0138 
+0139 
+0140 
+0141</pre></div>
+<hr><address>Generated on Sat 02-Sep-2017 02:27:19 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" title="Matlab Documentation in HTML">m2html</a></strong> &copy; 2005</address>
+</body>
+</html>

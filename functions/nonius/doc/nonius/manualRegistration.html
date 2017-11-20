@@ -1,0 +1,281 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of manualRegistration</title>
+  <meta name="keywords" content="manualRegistration">
+  <meta name="description" content="GUI for manual coregistration between point sets A and B. Returns a">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../index.html">Home</a> &gt;  <a href="index.html">nonius</a> &gt; manualRegistration.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../index.html"><img alt="<" border="0" src="../left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="index.html">Index for nonius&nbsp;<img alt=">" border="0" src="../right.png"></a></td></tr></table>-->
+
+<h1>manualRegistration
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>GUI for manual coregistration between point sets A and B. Returns a</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="box"><strong>function trf = manualRegistration(A, B) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre class="comment"> GUI for manual coregistration between point sets A and B. Returns a 
+ transformation structure (trf) containing the resulting affine matrix
+ (trf.T) and the translation values (trf.t)
+
+ nrg, '02-Sep-2017 01:07:03'</pre></div>
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+This function calls:
+<ul style="list-style-image:url(../matlabicon.gif)">
+</ul>
+This function is called by:
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="fitCal.html" class="code" title="function res = fitCal(calFile, design, distCorr)">fitCal</a>	Fit the calibration parameters on data with known reference points.</li></ul>
+<!-- crossreference -->
+
+<h2><a name="_subfunctions"></a>SUBFUNCTIONS <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<ul style="list-style-image:url(../matlabicon.gif)">
+<li><a href="#_sub1" class="code">function update(src, evt)</a></li><li><a href="#_sub2" class="code">function saveAndProceed(src, evnt)</a></li><li><a href="#_sub3" class="code">function p = getTransformValues()</a></li><li><a href="#_sub4" class="code">function resetValues(src, evt)</a></li></ul>
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function trf = manualRegistration(A, B)</a>
+0002 <span class="comment">% GUI for manual coregistration between point sets A and B. Returns a</span>
+0003 <span class="comment">% transformation structure (trf) containing the resulting affine matrix</span>
+0004 <span class="comment">% (trf.T) and the translation values (trf.t)</span>
+0005 <span class="comment">%</span>
+0006 <span class="comment">% nrg, '02-Sep-2017 01:07:03'</span>
+0007 
+0008 
+0009 <span class="keyword">global</span> h;
+0010 <span class="keyword">global</span> source;
+0011 
+0012 <span class="keyword">if</span> nargin &lt; 1
+0013     <span class="comment">% generate grid of points for testing</span>
+0014     [X, Y] = meshgrid(-4:2:4, -4:2:4);
+0015     source = [X(:), Y(:)];
+0016 <span class="keyword">else</span>
+0017     source = A;
+0018 <span class="keyword">end</span>
+0019 
+0020 <span class="keyword">if</span> nargin &lt; 2
+0021     <span class="comment">% generate a transformed target for testing</span>
+0022     c = 0.2;
+0023     target = source * [cos(c), -1*sin(c); sin(c), cos(c)] + 0.5;
+0024 <span class="keyword">else</span>
+0025     target = B;
+0026 <span class="keyword">end</span>
+0027  
+0028 <span class="comment">% exclude nan points</span>
+0029 excludePoints = any(isnan(source) | isnan(target), 2);
+0030 source(excludePoints, :) = [];
+0031 target(excludePoints, :) = [];
+0032 
+0033 <span class="comment">% axis limits based on target data</span>
+0034 ylims = [min(target(:,2)) max(target(:,2))];
+0035 h.ylims = ylims + 0.15*[-1,1] .* diff(ylims);
+0036 
+0037 xlims = [min(target(:,1)) max(target(:,1))];
+0038 h.xlims = xlims + 0.15*[-1,1] .* diff(xlims);
+0039 
+0040 <span class="comment">% Main figure</span>
+0041 screenSize = get(0, <span class="string">'Screensize'</span>);
+0042 sh = screenSize(4);
+0043 figWidth = 600;
+0044 figHeight = 300;
+0045 
+0046 h.f = figure(<span class="string">'Position'</span>, [100, sh-100-figHeight, figWidth, figHeight], <span class="keyword">...</span>
+0047              <span class="string">'Visible'</span>, <span class="string">'off'</span>);
+0048 
+0049 <span class="comment">% Axes</span>
+0050 h.mainAxes = axes(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0051                   <span class="string">'Units'</span>, <span class="string">'normalized'</span>,<span class="keyword">...</span>
+0052                   <span class="string">'Position'</span>, [0.1, 0.12, 0.4, 0.8]); 
+0053 
+0054 axes(h.mainAxes);
+0055 h.sPlot = plot(source(:, 1), source(:, 2), <span class="string">'o'</span>);
+0056 hold on;
+0057 h.tPlot = plot(target(:, 1), target(:, 2), <span class="string">'o'</span>);
+0058 xlabel(<span class="string">'Horizontal position'</span>);
+0059 ylabel(<span class="string">'Horizontal position'</span>);
+0060 xlim(h.xlims)
+0061 ylim(h.ylims)
+0062 
+0063 
+0064 <span class="comment">% UI controls</span>
+0065 <span class="comment">% - Sliders</span>
+0066 h.xShearSlider = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0067     <span class="string">'Style'</span>, <span class="string">'slider'</span>,<span class="keyword">...</span>
+0068     <span class="string">'SliderStep'</span>, [0.005, 0.1], <span class="keyword">...</span>
+0069     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0070     <span class="string">'Tag'</span>, <span class="string">'xShear'</span>,<span class="keyword">...</span>
+0071     <span class="string">'Min'</span>, 0, <span class="string">'Max'</span>, 3, <span class="string">'Value'</span>, 0,<span class="keyword">...</span>
+0072     <span class="string">'Position'</span>, [0.65 0.8 0.25 0.1],<span class="keyword">...</span>
+0073     <span class="string">'Callback'</span>, @<a href="#_sub1" class="code" title="subfunction update(src, evt)">update</a>);
+0074 
+0075 h.xShearText = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0076     <span class="string">'Style'</span>, <span class="string">'text'</span>,<span class="keyword">...</span>
+0077     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0078     <span class="string">'HorizontalAlignment'</span>, <span class="string">'left'</span>,<span class="keyword">...</span>
+0079     <span class="string">'String'</span>, <span class="string">'X-shear'</span>,<span class="keyword">...</span>
+0080     <span class="string">'Position'</span>, [0.53 0.8 0.1 0.1]);
+0081 
+0082 h.yShearSlider = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0083     <span class="string">'Style'</span>, <span class="string">'slider'</span>,<span class="keyword">...</span>
+0084     <span class="string">'SliderStep'</span>, [0.005, 0.1], <span class="keyword">...</span>
+0085     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0086     <span class="string">'Tag'</span>, <span class="string">'yShear'</span>,<span class="keyword">...</span>
+0087     <span class="string">'Min'</span>, 0, <span class="string">'Max'</span>, 3, <span class="string">'Value'</span>, 0,<span class="keyword">...</span>
+0088     <span class="string">'Position'</span>, [0.65 0.69 0.25 0.1],<span class="keyword">...</span>
+0089     <span class="string">'Callback'</span>, @<a href="#_sub1" class="code" title="subfunction update(src, evt)">update</a>);
+0090 
+0091 h.yShearText = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0092     <span class="string">'Style'</span>, <span class="string">'text'</span>,<span class="keyword">...</span>
+0093     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0094     <span class="string">'HorizontalAlignment'</span>, <span class="string">'left'</span>,<span class="keyword">...</span>
+0095     <span class="string">'String'</span>, <span class="string">'Y-shear'</span>,<span class="keyword">...</span>
+0096     <span class="string">'Position'</span>, [0.53 0.69 0.1 0.1]);
+0097 
+0098 
+0099 h.rotSlider = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0100     <span class="string">'Style'</span>, <span class="string">'slider'</span>,<span class="keyword">...</span>
+0101     <span class="string">'SliderStep'</span>, [0.0005, 0.1], <span class="keyword">...</span>
+0102     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0103     <span class="string">'Min'</span>, -1*pi(), <span class="string">'Max'</span>, pi(), <span class="string">'Value'</span>, 0, <span class="keyword">...</span>
+0104     <span class="string">'Tag'</span>, <span class="string">'rotation'</span>,<span class="keyword">...</span>
+0105     <span class="string">'Position'</span>, [0.65 0.57 0.25 0.1],<span class="keyword">...</span>
+0106     <span class="string">'Callback'</span>, @<a href="#_sub1" class="code" title="subfunction update(src, evt)">update</a>);
+0107 
+0108 h.rotText = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0109     <span class="string">'Style'</span>, <span class="string">'text'</span>,<span class="keyword">...</span>
+0110     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0111     <span class="string">'HorizontalAlignment'</span>, <span class="string">'left'</span>,<span class="keyword">...</span>
+0112     <span class="string">'String'</span>, <span class="string">'Rotation'</span>,<span class="keyword">...</span>
+0113     <span class="string">'Position'</span>, [0.53 0.57 0.1 0.1]);
+0114 
+0115 h.xtSlider = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0116     <span class="string">'Style'</span>, <span class="string">'slider'</span>,<span class="keyword">...</span>
+0117     <span class="string">'SliderStep'</span>, [0.005, 0.1], <span class="keyword">...</span>
+0118     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0119     <span class="string">'Tag'</span>, <span class="string">'xTranslation'</span>,<span class="keyword">...</span>
+0120     <span class="string">'Min'</span>, -1, <span class="string">'Max'</span>, 1, <span class="string">'Value'</span>, 0,<span class="keyword">...</span>
+0121     <span class="string">'Position'</span>, [0.65 0.46 0.25 0.1],<span class="keyword">...</span>
+0122     <span class="string">'Callback'</span>, @<a href="#_sub1" class="code" title="subfunction update(src, evt)">update</a>);
+0123 
+0124 h.xtText = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0125     <span class="string">'Style'</span>, <span class="string">'text'</span>,<span class="keyword">...</span>
+0126     <span class="string">'HorizontalAlignment'</span>, <span class="string">'left'</span>,<span class="keyword">...</span>
+0127     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0128     <span class="string">'String'</span>, <span class="string">'X-translation'</span>,<span class="keyword">...</span>
+0129     <span class="string">'Position'</span>, [0.53 0.46 0.1 0.1]);
+0130 
+0131 h.ytSlider = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0132     <span class="string">'Style'</span>, <span class="string">'slider'</span>,<span class="keyword">...</span>
+0133     <span class="string">'SliderStep'</span>, [0.005, 0.1], <span class="keyword">...</span>
+0134     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0135     <span class="string">'Tag'</span>, <span class="string">'yTranslation'</span>,<span class="keyword">...</span>
+0136     <span class="string">'Min'</span>, -1, <span class="string">'Max'</span>, 1, <span class="string">'Value'</span>, 0,<span class="keyword">...</span>
+0137     <span class="string">'Position'</span>, [0.65 0.35 0.25 0.1],<span class="keyword">...</span>
+0138     <span class="string">'Callback'</span>, @<a href="#_sub1" class="code" title="subfunction update(src, evt)">update</a>);
+0139 
+0140 h.ytText = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0141     <span class="string">'Style'</span>, <span class="string">'text'</span>,<span class="keyword">...</span>
+0142     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0143     <span class="string">'HorizontalAlignment'</span>, <span class="string">'left'</span>,<span class="keyword">...</span>
+0144     <span class="string">'String'</span>, <span class="string">'Y-translation'</span>,<span class="keyword">...</span>
+0145     <span class="string">'Position'</span>, [0.53 0.35 0.1 0.1]);
+0146 
+0147 <span class="comment">% - Buttons</span>
+0148 h.resetBtn = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0149     <span class="string">'Style'</span>, <span class="string">'pushbutton'</span>, <span class="string">'String'</span>, <span class="string">'Reset'</span>,<span class="keyword">...</span>
+0150     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0151     <span class="string">'Position'</span>, [0.65 0.1 0.25 0.1],<span class="keyword">...</span>
+0152     <span class="string">'Callback'</span>, @<a href="#_sub4" class="code" title="subfunction resetValues(src, evt)">resetValues</a>);
+0153 
+0154 h.doneBtn = uicontrol(<span class="string">'Parent'</span>, h.f, <span class="keyword">...</span>
+0155     <span class="string">'Style'</span>, <span class="string">'pushbutton'</span>, <span class="string">'String'</span>, <span class="string">'Done'</span>,<span class="keyword">...</span>
+0156     <span class="string">'Units'</span>,<span class="string">'normalized'</span>,<span class="keyword">...</span>
+0157     <span class="string">'Position'</span>, [0.65 0.24 0.25 0.1],<span class="keyword">...</span>
+0158     <span class="string">'Callback'</span>, @<a href="#_sub2" class="code" title="subfunction saveAndProceed(src, evnt)">saveAndProceed</a>);
+0159                  
+0160                  
+0161 h.f.Visible = <span class="string">'on'</span>;
+0162 
+0163 uiwait(h.f)
+0164 
+0165 <span class="keyword">if</span> isvalid(h.f)
+0166     p = <a href="#_sub3" class="code" title="subfunction p = getTransformValues()">getTransformValues</a>();
+0167 
+0168     trf.T = p.xs * p.ys * p.rot;
+0169     trf.t = p.t';
+0170     close(h.f);
+0171 <span class="keyword">else</span> 
+0172     trf.T = [];
+0173     trf.t = [];
+0174 <span class="keyword">end</span>
+0175 
+0176 
+0177 <span class="comment">% Callbacks</span>
+0178 
+0179 <a name="_sub1" href="#_subfunctions" class="code">function update(src, evt)</a>
+0180 
+0181 <span class="keyword">global</span> h;
+0182 <span class="keyword">global</span> source;
+0183 
+0184 p = <a href="#_sub3" class="code" title="subfunction p = getTransformValues()">getTransformValues</a>();
+0185 
+0186 tSource = source * p.xs * p.ys * p.rot + repmat(p.t, [size(source,1), 1]);
+0187 
+0188 set(h.sPlot, <span class="string">'XData'</span>, tSource(:,1)')
+0189 set(h.sPlot, <span class="string">'YData'</span>, tSource(:,2)')
+0190 
+0191 xlim(h.xlims)
+0192 ylim(h.ylims)
+0193 
+0194 
+0195 <a name="_sub2" href="#_subfunctions" class="code">function saveAndProceed(src, evnt)</a>
+0196 
+0197 <span class="keyword">global</span> h;
+0198 uiresume(h.f);
+0199 
+0200 
+0201 <a name="_sub3" href="#_subfunctions" class="code">function p = getTransformValues()</a>
+0202 
+0203 <span class="keyword">global</span> h;
+0204 cx = get(h.xShearSlider, <span class="string">'Value'</span>);
+0205 p.xs = [1, 0; cx, 1];
+0206 
+0207 cy = get(h.yShearSlider, <span class="string">'Value'</span>);
+0208 p.ys = [1, cy; 0, 1];
+0209 
+0210 r = get(h.rotSlider, <span class="string">'Value'</span>);
+0211 p.rot = [cos(r), -1*sin(r); sin(r), cos(r)];
+0212 
+0213 xt = get(h.xtSlider, <span class="string">'Value'</span>);
+0214 yt = get(h.ytSlider, <span class="string">'Value'</span>);
+0215 p.t = [xt, yt];
+0216 
+0217 
+0218 <a name="_sub4" href="#_subfunctions" class="code">function resetValues(src, evt)</a>
+0219 
+0220 <span class="keyword">global</span> h;
+0221 set(h.xShearSlider, <span class="string">'Value'</span>, 0);
+0222 set(h.yShearSlider, <span class="string">'Value'</span>, 0);
+0223 set(h.rotSlider, <span class="string">'Value'</span>, 0);
+0224 set(h.xtSlider, <span class="string">'Value'</span>, 0)
+0225 set(h.ytSlider, <span class="string">'Value'</span>, 0)
+0226 
+0227 <a href="#_sub1" class="code" title="subfunction update(src, evt)">update</a>([], []);
+0228</pre></div>
+<hr><address>Generated on Sat 02-Sep-2017 02:27:19 by <strong><a href="http://www.artefact.tk/software/matlab/m2html/" title="Matlab Documentation in HTML">m2html</a></strong> &copy; 2005</address>
+</body>
+</html>
