@@ -4,7 +4,7 @@ pathToPsignifit = 'D:\NRG\tools\psignifit';
 addpath(genpath(pathToPsignifit))
 
 % directory where results are saved
-resultsDir = [pwd '\data\signed-corr-mws-levels\subjects'];
+resultsDir = fullfile(pwd,'data', 'signed-corr-mws-levels','subjects');
 subjects = {'AW', 'NG', 'LS'};
 
 % experiment identifiers per subject

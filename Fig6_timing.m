@@ -2,7 +2,7 @@ clc; close all; clear all;
 addpath(genpath([pwd filesep 'functions']))
 
 % directory where results are saved
-resultsDir = [pwd '\data\signed-corr-mws-time\subjects'];
+resultsDir = fullfile(pwd,'data', 'signed-corr-mws-time', 'subjects');
 subjects = {'AW', 'NG', 'LS'}; 
 expId = 1;  % for panel b and c
 % expId = 3;  % for panel d (control)

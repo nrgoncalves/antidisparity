@@ -2,7 +2,7 @@ clc; clear all;
 addpath(genpath([pwd filesep 'functions']))
 
 % directory where results are saved
-resultsDir = [pwd '\data\signed-corr-mws-scale\subjects'];
+resultsDir = fullfile(pwd, 'data', 'signed-corr-mws-scale', 'subjects');
 subjects = {'AW', 'NG', 'LS'}; 
 
 % experiment identifiers

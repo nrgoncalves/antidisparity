@@ -2,7 +2,7 @@ clc, clear all, close all;
 addpath(genpath([pwd filesep 'functions']))
 
 % directory where results are saved
-resultsDir = [pwd '\data\signed-corr-tms\subjects'];
+resultsDir = fullfile(pwd,'data','signed-corr-tms','subjects');
 subjects = {'AW', 'NG', 'LS', 'RR', 'WH', 'VK',...
             'EM', 'MG', 'ZR', 'PF', 'LL', 'SW'}; 
 

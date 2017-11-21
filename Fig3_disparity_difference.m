@@ -8,7 +8,7 @@ addpath(genpath(pathToPsignifit))
 fitPsychFlag = 1; 
 
 % directory where results are saved
-resultsDir = [pwd '\data\signed-corr-mws-levels\subjects'];
+resultsDir = fullfile(pwd,'data', 'signed-corr-mws-levels', 'subjects');
 subjects = {'AW', 'NG', 'LS'}; 
 
 % experiment identifiers
